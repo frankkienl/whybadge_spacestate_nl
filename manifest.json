@@ -1,0 +1,10 @@
+{
+    "unique_identifier": "spacestate_nl",
+    "name": "Space State NL",
+    "author": "FrankkieNL",
+    "version": "1",
+    "interpreter": "",
+    "metadata_file": "",
+    "binary_path": "spacestate_nl.elf",
+    "source": 1
+}
