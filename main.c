@@ -24,10 +24,6 @@
 #define PIN_GREEN                  "APPS:[SPACESTATE_NL.IMAGES]PIN_GREEN.PNG"
 #define PIN_RED                    "APPS:[SPACESTATE_NL.IMAGES]PIN_RED.PNG"
 
-#define pixelbar_url "https://spaceapi.pixelbar.nl/"
-#define pixelbar_x 272
-#define pixelbar_y 368
-
 int render_png_to_framebuffer(
     uint16_t *framebuffer, int fb_width, int fb_height, char const *filename, int dest_x, int dest_y
 );
@@ -43,7 +39,7 @@ typedef struct {
     const int x;
     const int y;
     bool is_open;
-    unint32_t last_checked;
+    uint32_t last_checked;
 } hacker_space_t;
 
 // Enum van Nederlandse hacker spaces
@@ -66,17 +62,19 @@ typedef enum {
     COUNT
 } hacker_spaces_e;
 
+#define NUM_HACKER_SPACES 2
+
 typedef struct {
-    hacker_space_t hackerspaces[COUNT];
-} hacker_spaces_t
+    hacker_space_t hackerspaces[NUM_HACKER_SPACES/*COUNT*/];
+} hacker_spaces_t;
 
 static hacker_spaces_t g_space_state = {
     .hackerspaces = {
-        //[ackspace] = { "ACKspace", "", 0, 0, false, 0 },
+        [ackspace] = { "ACKspace", "", 0, 0, false, 0 },
         [awesomespace] = { "AwesomeSpace", "", 0, 0, false, 0 },
-        [pixelbar] = { "Pixelbar", "https://spaceapi.pixelbar.nl/", 272, 368, false, 0}
+        //[1] = { "Pixelbar", "https://spaceapi.pixelbar.nl/", 272, 368, false, 0}
     }
-}
+};
 
 typedef struct {
     uint16_t   *temp_framebuffer;
@@ -111,7 +109,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, Mem
     return realsize;
 }
 
-bool get_space_state(char *space_url) {
+bool get_space_state(const char *space_url) {
     CURL *curl;
     CURLcode res;
     MemoryStruct chunk;
@@ -144,8 +142,8 @@ bool get_space_state(char *space_url) {
 }
 
 void get_space_states(uint16_t *framebuffer) {
-    for (int i = 0; i < hacker_spaces_e.COUNT; i++) {
-        val isOpen = get_space_state(g_space_state.hackerspaces[i].url);
+    for (int i = 0; i < NUM_HACKER_SPACES; i++) {
+        bool isOpen = get_space_state(g_space_state.hackerspaces[i].url);
         g_space_state.hackerspaces[i].is_open = isOpen;
 
         // To framebuffer
