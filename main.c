@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h> // voor isspace()
 
 #include <badgevms/compositor.h>
 #include <badgevms/event.h>
@@ -34,7 +35,7 @@ int render_png_with_alpha_scaled(
 
 // Data van 1 hacker space
 typedef struct {
-    const char* display_ame;
+    char* display_name;
     const char* url;
     const int x;
     const int y;
@@ -56,13 +57,13 @@ typedef enum {
     randomdata,
     revspace,
     space_leiden,
-    hs_tdvenlo,
+    tdvenlo,
     techinc,
     tkkrlab,
     COUNT
 } hacker_spaces_e;
 
-#define NUM_HACKER_SPACES 2
+#define NUM_HACKER_SPACES 15
 
 typedef struct {
     hacker_space_t hackerspaces[NUM_HACKER_SPACES/*COUNT*/];
@@ -70,9 +71,21 @@ typedef struct {
 
 static hacker_spaces_t g_space_state = {
     .hackerspaces = {
-        [ackspace] = { "ACKspace", "", 0, 0, false, 0 },
-        [awesomespace] = { "AwesomeSpace", "", 0, 0, false, 0 },
-        //[1] = { "Pixelbar", "https://spaceapi.pixelbar.nl/", 272, 368, false, 0}
+        [ackspace] = { "ACKspace", "https://ackspace.nl/spaceAPI", 445, 555, false, 0 },
+        [awesomespace] = { "AwesomeSpace", "https://state.awesomespace.nl", 345, 319, false, 0 },
+        [bitlair] = { "Bitlair", "https://bitlair.nl/statejson.php", 378, 343, false, 0 },
+        [hack42] = { "Hack42", "https://hack42.nl/spacestate/json.php", 438, 348, false, 0 },
+        [hackalot] = { "Hackalot", "https://hackalot.nl/statejson", 390, 443, false, 0 },
+        [hs_drenthe] = { "Hackerspace Drenthe", "https://mqtt.hackerspace-drenthe.nl/spaceapi", 527, 209, false, 0 },
+        [hs_nijmegen] = { "Hackerspace Nijmegen", "https://state.hackerspacenijmegen.nl/state.json", 416, 380, false, 0 },
+        [nurdspace] = { "NURDSpace", "https://space.nurdspace.nl/spaceapi/status.json", 385, 385, false, 0 }, 
+        [pixelbar] = { "Pixelbar", "https://spaceapi.pixelbar.nl/", 272, 368, false, 0 },
+        [randomdata] = { "RandomData", "", 326, 353, false, 0 },
+        [revspace] = { "RevSpace", "https://revspace.nl/status/status.php", 234, 345, false, 0 },
+        [space_leiden] = { "Space Leiden", "", 260, 320, false, 0 },
+        [tdvenlo] = { "TDvenlo", "https://spaceapi.tdvenlo.nl/spaceapi.json", 458, 470, false, 0},
+        [techinc] = { "TechInc", "", 290, 270, false, 0 },
+        [tkkrlab] = { "TkkrLab", "https://spaceapi.tkkrlab.nl", 530, 310, false, 0} 
     }
 };
 
@@ -109,6 +122,19 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, Mem
     return realsize;
 }
 
+void remove_whitespace(char *str) {
+    char *src = str;  // lezer
+    char *dst = str;  // schrijver
+
+    while (*src) {
+        if (!isspace((unsigned char)*src)) {
+            *dst++ = *src; // kopieer als het GEEN whitespace is
+        }
+        src++;
+    }
+    *dst = '\0'; // afsluiten
+}
+
 bool get_space_state(const char *space_url) {
     CURL *curl;
     CURLcode res;
@@ -129,6 +155,8 @@ bool get_space_state(const char *space_url) {
             printf("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
         } else {
             printf("Received %lu bytes:\n%s\n", (unsigned long)chunk.size, chunk.memory);
+            // Remove whitespace
+            remove_whitespace(chunk.memory);
             // Check if hacker space is open
             if (strstr(chunk.memory, "\"open\":true") != NULL) {
                 return true;
@@ -139,20 +167,6 @@ bool get_space_state(const char *space_url) {
     }
     free(chunk.memory);
     return false;
-}
-
-void get_space_states(uint16_t *framebuffer) {
-    for (int i = 0; i < NUM_HACKER_SPACES; i++) {
-        bool isOpen = get_space_state(g_space_state.hackerspaces[i].url);
-        g_space_state.hackerspaces[i].is_open = isOpen;
-
-        // To framebuffer
-        if (isOpen) {
-            render_png_with_alpha_scaled(framebuffer, g_app_state.fb_width, g_app_state.fb_height, PIN_GREEN, g_space_state.hackerspaces[i].x, g_space_state.hackerspaces[i].y, 1);
-        } else {
-            render_png_with_alpha_scaled(framebuffer, g_app_state.fb_width, g_app_state.fb_height, PIN_RED, g_space_state.hackerspaces[i].x, g_space_state.hackerspaces[i].y, 1);
-        }
-    }
 }
 
 int main(int argc, char *argv[]) {
@@ -186,10 +200,13 @@ int main(int argc, char *argv[]) {
     memcpy(g_app_state.clean_background, framebuffer->pixels, framebuffer->w * framebuffer->h * sizeof(uint16_t));
     printf("Space State NL - saved background\n");
 
-    uint32_t timestamp = 0;
-    uint32_t interval = 10*1000;
+    uint32_t big_timestamp = 0;
+    uint32_t big_interval = 30*1000;
+    uint32_t small_timestamp = 0;
+    uint32_t small_interval = 500;
 
     // Main loop
+    int i = 0;
     while(true) {
         event_t e = window_event_poll(window, false, 0);
         if (e.type == EVENT_KEY_DOWN) {
@@ -200,10 +217,29 @@ int main(int argc, char *argv[]) {
         }
 
         uint32_t current_time = time(NULL) * 1000;
-        if (current_time - timestamp >= interval) {
-            timestamp = current_time;
-            get_space_states(framebuffer->pixels);
+        if (current_time - big_timestamp >= big_interval) {
+            if (current_time - small_timestamp >= small_interval) {
+                // Check Spaces
+                printf("Space State NL - Checking %s %s", g_space_state.hackerspaces[i].display_name, "...");
+                bool isOpen = get_space_state(g_space_state.hackerspaces[i].url);
+                g_space_state.hackerspaces[i].is_open = isOpen;
+                if (isOpen) {
+                    printf("Space State NL - Checking %s %s", g_space_state.hackerspaces[i].display_name, " is OPEN");
+                    render_png_with_alpha_scaled(framebuffer->pixels, g_app_state.fb_width, g_app_state.fb_height, PIN_GREEN, g_space_state.hackerspaces[i].x, g_space_state.hackerspaces[i].y, 1);
+                } else {
+                    printf("Space State NL - Checking %s %s", g_space_state.hackerspaces[i].display_name, " is CLOSED");
+                    render_png_with_alpha_scaled(framebuffer->pixels, g_app_state.fb_width, g_app_state.fb_height, PIN_RED, g_space_state.hackerspaces[i].x, g_space_state.hackerspaces[i].y, 1);
+                }
+                i++;
+                small_timestamp = current_time;
+                if (i>=NUM_HACKER_SPACES) {
+                    printf("Space State NL - Checked all, waiting for about 30 seconds");
+                    i = 0;
+                    big_timestamp = current_time;
+                }
+            }
         }
+
 
         window_present(window, true, NULL, 0);
     }
