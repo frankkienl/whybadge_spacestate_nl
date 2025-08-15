@@ -36,23 +36,47 @@ int render_png_with_alpha_scaled(
     uint16_t *framebuffer, int fb_width, int fb_height, char const *filename, int dest_x, int dest_y, int scale_factor
 );
 
+// Data van 1 hacker space
 typedef struct {
-    bool ackspace;
-    bool awesomespace;
-    bool bitlair;
-    bool hack42;
-    bool hackalot;
-    bool hs_drenthe;
-    bool hs_nijmegen;
-    bool nurdspace;
-    bool pixelbar;
-    bool randomdata;
-    bool revspace;
-    bool space_leiden;
-    bool hs_tdvenlo;
-    bool techinc;
-    bool tkkrlab;
-} space_state_t;
+    const char* display_ame;
+    const char* url;
+    const int x;
+    const int y;
+    bool is_open;
+    unint32_t last_checked;
+} hacker_space_t;
+
+// Enum van Nederlandse hacker spaces
+typedef enum {
+    ackspace,
+    awesomespace,
+    bitlair,
+    hack42,
+    hackalot,
+    hs_drenthe,
+    hs_nijmegen,
+    nurdspace,
+    pixelbar,
+    randomdata,
+    revspace,
+    space_leiden,
+    hs_tdvenlo,
+    techinc,
+    tkkrlab,
+    COUNT
+} hacker_spaces_e;
+
+typedef struct {
+    hacker_space_t hackerspaces[COUNT];
+} hacker_spaces_t
+
+static hacker_spaces_t g_space_state = {
+    .hackerspaces = {
+        //[ackspace] = { "ACKspace", "", 0, 0, false, 0 },
+        [awesomespace] = { "AwesomeSpace", "", 0, 0, false, 0 },
+        [pixelbar] = { "Pixelbar", "https://spaceapi.pixelbar.nl/", 272, 368, false, 0}
+    }
+}
 
 typedef struct {
     uint16_t   *temp_framebuffer;
@@ -61,7 +85,6 @@ typedef struct {
     int         fb_height;
 } app_state_t;
 
-static space_state_t g_space_state = {0};
 static app_state_t g_app_state = {0};
 
 // For cURL response
@@ -121,14 +144,16 @@ bool get_space_state(char *space_url) {
 }
 
 void get_space_states(uint16_t *framebuffer) {
-    // Pixelbar
-    g_space_state.pixelbar = get_space_state(pixelbar_url);
+    for (int i = 0; i < hacker_spaces_e.COUNT; i++) {
+        val isOpen = get_space_state(g_space_state.hackerspaces[i].url);
+        g_space_state.hackerspaces[i].is_open = isOpen;
 
-    // Write results to framebuffer
-    if (g_space_state.pixelbar) {
-        render_png_with_alpha_scaled(framebuffer, g_app_state.fb_width, g_app_state.fb_height, PIN_GREEN, pixelbar_x, pixelbar_y, 1);
-    } else {
-        render_png_with_alpha_scaled(framebuffer, g_app_state.fb_width, g_app_state.fb_height, PIN_RED, pixelbar_x, pixelbar_y, 1);
+        // To framebuffer
+        if (isOpen) {
+            render_png_with_alpha_scaled(framebuffer, g_app_state.fb_width, g_app_state.fb_height, PIN_GREEN, g_space_state.hackerspaces[i].x, g_space_state.hackerspaces[i].y, 1);
+        } else {
+            render_png_with_alpha_scaled(framebuffer, g_app_state.fb_width, g_app_state.fb_height, PIN_RED, g_space_state.hackerspaces[i].x, g_space_state.hackerspaces[i].y, 1);
+        }
     }
 }
 
