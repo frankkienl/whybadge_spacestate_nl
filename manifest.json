@@ -2,7 +2,7 @@
     "unique_identifier": "spacestate_nl",
     "name": "Space State NL",
     "author": "FrankkieNL",
-    "version": "2",
+    "version": "2.0.1",
     "interpreter": "",
     "metadata_file": "",
     "binary_path": "spacestate_nl.elf",

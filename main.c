@@ -82,7 +82,7 @@ static hacker_spaces_t g_space_state = {
         [pixelbar] = { "Pixelbar", "https://spaceapi.pixelbar.nl/", 272, 368, false, 0 },
         [randomdata] = { "RandomData", "", 326, 353, false, 0 },
         [revspace] = { "RevSpace", "https://revspace.nl/status/status.php", 234, 345, false, 0 },
-        [space_leiden] = { "Space Leiden", "", 260, 320, false, 0 },
+        [space_leiden] = { "Space Leiden", "https://portal.spaceleiden.nl/api/public/status.json", 260, 320, false, 0 },
         [tdvenlo] = { "TDvenlo", "https://spaceapi.tdvenlo.nl/spaceapi.json", 458, 470, false, 0},
         [techinc] = { "TechInc", "", 290, 270, false, 0 },
         [tkkrlab] = { "TkkrLab", "https://spaceapi.tkkrlab.nl", 530, 310, false, 0} 
@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
     uint32_t big_timestamp = 0;
     uint32_t big_interval = 30*1000;
     uint32_t small_timestamp = 0;
-    uint32_t small_interval = 500;
+    uint32_t small_interval = 250;
 
     // Main loop
     int i = 0;
